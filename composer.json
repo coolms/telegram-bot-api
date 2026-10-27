@@ -1,0 +1,45 @@
+{
+    "name": "coolms/telegram-bot-api",
+    "description": "A Telegram Bot API client for PHP: messages, updates by long polling or webhook, and deep-link starts. Framework-free, over symfony/http-client-contracts.",
+    "type": "library",
+    "keywords": [
+        "coolms",
+        "telegram",
+        "bot",
+        "api",
+        "client"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Dmitry Popov",
+            "email": "d.popov@altgraphic.com"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/coolms/telegram-bot-api/issues",
+        "source": "https://github.com/coolms/telegram-bot-api"
+    },
+    "require": {
+        "php": "^8.5",
+        "symfony/http-client-contracts": "^3.6"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.5",
+        "symfony/http-client": "^8.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "CoolMS\\TelegramBotApi\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "CoolMS\\TelegramBotApi\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "minimum-stability": "stable"
+}

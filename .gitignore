@@ -1,0 +1,12 @@
+# The same rules everywhere in the repository.
+vendor/
+composer.lock
+.phpunit.cache/
+.phpunit.result.cache
+phpunit.xml
+.php-cs-fixer.cache
+build/
+coverage/
+
+# composer.lock is deliberately NOT committed: these are LIBRARIES, so a lock would only pin the dev toolchain and
+# would fight every consumer's own resolution.
