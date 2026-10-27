@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Changed
+- `getUpdates()` throws `Refused` when the Bot API refuses a long poll, where it returned no updates before. To
+  migrate, catch `Refused`: on 409 another poller or a webhook holds the bot, so stop polling it rather than retrying;
+  on 429 wait `retryAfter` seconds.
+
 ### Added
 - `BotClient` for one bot: `sendMessage()` (the text cut at the Bot API's 4096 characters), `getUpdates()` by long
   polling (the request waits longer than Telegram holds it), `setWebhook()` with a secret token and

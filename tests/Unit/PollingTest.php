@@ -105,9 +105,10 @@ final class PollingTest extends TestCase
     #[Test]
     public function aBotThatCannotBeReachedComesBackAsUnreachableWithItsTokenMasked(): void
     {
-        $http = new MockHttpClient(static function (string $method, string $url): MockResponse {
-            return new MockResponse('', ['error' => 'Could not resolve host for "' . $url . '".']);
-        });
+        $http = new MockHttpClient(static fn (string $method, string $url): MockResponse => new MockResponse(
+            '',
+            ['error' => 'Could not resolve host for "' . $url . '".'],
+        ));
         $support = new BotClient($http, self::TOKEN_A);
 
         $answers = iterator_to_array(PolledUpdates::asTheyArrive($http, ['support' => $support->pollUpdates(0, 25)]));
