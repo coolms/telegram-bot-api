@@ -8,6 +8,8 @@ on:
   # request.
   schedule:
     - cron: '0 6 * * 1'
+  # By hand, from the Actions tab or `gh workflow run CI --ref <branch>`, so a commit can be tested before it is tagged.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -38,6 +40,9 @@ jobs:
       # No composer.lock (a library), so this resolves fresh every run.
       - name: Install dependencies
         run: composer update --prefer-dist --no-interaction --no-progress
+
+      - name: Lint sources
+        run: find src tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
 
       - name: Unit tests
         run: vendor/bin/phpunit --testdox
