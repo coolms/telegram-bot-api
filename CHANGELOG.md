@@ -14,3 +14,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `StartCommand`: a deep-link start, in a private chat only, with a token from the deep link's alphabet.
 - `WebhookSecret`: the secret-token header compared in constant time; an empty secret matches nothing.
 - The bot token is never in what the client throws: a transport failure comes back with the token masked.
+- `Refused`: long polling refused by the Bot API -- another poller or a webhook on the bot (409), too many requests
+  (429, with `retryAfter`) -- is thrown with its status and words, never answered as an empty batch.
+- `BotClient::pollUpdates()` and `PolledUpdates::asTheyArrive()`: several bots' long polls read together over one HTTP
+  client, through the client's own `stream()`, each answer (updates, `Refused` or `Unreachable`) under its key as it
+  arrives.

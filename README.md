@@ -13,6 +13,20 @@ composer require coolms/telegram-bot-api
 
 - `BotClient`: `sendMessage()`, `getUpdates()` (long polling), `setWebhook()` with a secret token, `deleteWebhook()`.
   A bot is read one way at a time: Telegram refuses long polling while a webhook is set.
+- `Refused`: what a refused long poll throws -- its status, Telegram's words, and for too many requests how long to
+  wait. A 409 means another poller or a webhook holds the bot; polling again at once only repeats it.
+- `pollUpdates()` and `PolledUpdates::asTheyArrive()`: several bots polled together over one HTTP client. Each poll
+  is started, and the client's own `stream()` reads every answer as it arrives:
+
+  ```php
+  $polls = [
+      'support' => $support->pollUpdates($offsets['support'], 25),
+      'sales' => $sales->pollUpdates($offsets['sales'], 25),
+  ];
+  foreach (PolledUpdates::asTheyArrive($http, $polls) as $bot => $answer) {
+      // $answer: list<Update>, Refused or Unreachable
+  }
+  ```
 - `Update`, `Message`: an update and the message it carries, as much of them as is read.
 - `StartCommand`: a person starting the bot through `t.me/<bot>?start=<token>`; only a start in a private chat with a
   token from the deep link's alphabet counts.

@@ -8,6 +8,7 @@ use SensitiveParameter;
 use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 use function is_array;
 use function is_int;
@@ -68,16 +69,38 @@ final readonly class BotClient
      */
     public function getUpdates(int $offset, int $waitSeconds): array
     {
-        $body = ['offset' => $offset, 'timeout' => $waitSeconds, 'allowed_updates' => self::UPDATES];
-        [, $decoded] = $this->call('getUpdates', $body, $waitSeconds + $this->timeout);
-        $updates = [];
-        foreach (is_array($decoded['result'] ?? null) ? $decoded['result'] : [] as $raw) {
-            if (is_array($raw) && is_int($raw['update_id'] ?? null)) {
-                $updates[] = Update::from($raw);
-            }
-        }
+        return $this->pollUpdates($offset, $waitSeconds)->updates();
+    }
 
-        return $updates;
+    /**
+     * A long poll started and not waited for, so several bots can be polled together over one HTTP client
+     * ({@see PolledUpdates::asTheyArrive()}); {@see getUpdates()} is this, waited for.
+     */
+    public function pollUpdates(int $offset, int $waitSeconds): PendingUpdates
+    {
+        $body = ['offset' => $offset, 'timeout' => $waitSeconds, 'allowed_updates' => self::UPDATES];
+
+        return new PendingUpdates(
+            $this->request('getUpdates', $body, $waitSeconds + $this->timeout),
+            function (ResponseInterface $response): array {
+                [$answer, $decoded] = $this->read($response);
+                if (!$answer->ok() || false === ($decoded['ok'] ?? null)) {
+                    $parameters = $decoded['parameters'] ?? null;
+                    $retryAfter = is_array($parameters) && is_int($parameters['retry_after'] ?? null)
+                        ? $parameters['retry_after'] : null;
+
+                    throw new Refused('getUpdates', $answer->status, $answer->description, $retryAfter);
+                }
+                $updates = [];
+                foreach (is_array($decoded['result'] ?? null) ? $decoded['result'] : [] as $raw) {
+                    if (is_array($raw) && is_int($raw['update_id'] ?? null)) {
+                        $updates[] = Update::from($raw);
+                    }
+                }
+
+                return $updates;
+            },
+        );
     }
 
     /**
@@ -112,12 +135,39 @@ final readonly class BotClient
      */
     private function call(string $method, array $body, float $timeout): array
     {
+        return $this->read($this->request($method, $body, $timeout));
+    }
+
+    /**
+     * The request made, its answer not yet read.
+     *
+     * @param array<string, mixed> $body
+     *
+     * @throws Unreachable when the request could not be made
+     */
+    private function request(string $method, array $body, float $timeout): ResponseInterface
+    {
         try {
-            $response = $this->http->request('POST', sprintf(self::API, $this->token, $method), [
+            return $this->http->request('POST', sprintf(self::API, $this->token, $method), [
                 'json' => $body,
                 'timeout' => $timeout,
                 'max_redirects' => 0,
             ]);
+        } catch (TransportExceptionInterface $e) {
+            throw new Unreachable(str_replace($this->token, '***', $e->getMessage()));
+        }
+    }
+
+    /**
+     * A request's answer, waited for.
+     *
+     * @throws Unreachable when no answer came
+     *
+     * @return array{Answer, array<mixed>}
+     */
+    private function read(ResponseInterface $response): array
+    {
+        try {
             $status = $response->getStatusCode();
             try {
                 $decoded = $response->toArray(false);
